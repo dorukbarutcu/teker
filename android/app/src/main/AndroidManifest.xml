@@ -32,6 +32,12 @@
         <meta-data
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
+        <meta-data
+            android:name="distro.car.application"
+            android:resource="@xml/automotive_app_desc" />
+        <meta-data
+            android:name="com.google.android.gms.car.notification.SmallIcon"
+            android:resource="@mipmap/ic_launcher" />
 
         <!-- Telefon Ana Aktivitesi -->
         <activity
@@ -89,6 +95,9 @@
                 <action android:name="androidx.car.app.CarAppService" />
                 <category android:name="androidx.car.app.category.NAVIGATION" />
             </intent-filter>
+            <meta-data
+                android:name="androidx.car.app.category"
+                android:value="androidx.car.app.category.NAVIGATION" />
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
