@@ -1,5 +1,6 @@
 package com.teker.navigation
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,6 +8,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -14,6 +16,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 
 class TekerLocationService : Service(), LocationListener {
 
@@ -24,7 +27,21 @@ class TekerLocationService : Service(), LocationListener {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(notificationId, buildNotification("Navigasyon ve sesli asistan arka planda aktif"))
+
+        val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+        if (!fineGranted && !coarseGranted) {
+            stopSelf()
+            return
+        }
+
+        try {
+            startForeground(notificationId, buildNotification("Navigasyon ve sesli asistan arka planda aktif"))
+        } catch (e: Exception) {
+            stopSelf()
+            return
+        }
 
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         try {

@@ -100,13 +100,28 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "startForegroundService" -> {
-                    val intent = Intent(this, TekerLocationService::class.java)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        startForegroundService(intent)
+                    val fineGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+                        this, android.Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    val coarseGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+                        this, android.Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+                    if (fineGranted || coarseGranted) {
+                        try {
+                            val intent = Intent(this, TekerLocationService::class.java)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                startForegroundService(intent)
+                            } else {
+                                startService(intent)
+                            }
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.success(false)
+                        }
                     } else {
-                        startService(intent)
+                        result.success(false)
                     }
-                    result.success(true)
                 }
                 "stopForegroundService" -> {
                     stopService(Intent(this, TekerLocationService::class.java))

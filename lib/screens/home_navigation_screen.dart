@@ -6,12 +6,15 @@ import 'package:latlong2/latlong.dart';
 import '../models/ebike_models.dart';
 import '../models/poi_model.dart';
 import '../models/route_models.dart';
+import '../models/saved_location_model.dart';
 import '../services/ebike_calculator.dart';
 import '../services/gemini_command_service.dart';
 import '../services/openroute_service.dart';
 import '../services/overpass_service.dart';
+import '../services/saved_locations_service.dart';
 import '../services/telemetry_bridge.dart';
 import '../widgets/cockpit_bottom_sheet.dart';
+import '../widgets/saved_location_dialog.dart';
 import '../widgets/turn_by_turn_banner.dart';
 import 'ebike_settings_screen.dart';
 import 'gpx_import_screen.dart';
@@ -49,6 +52,7 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
   // Harita İşaretçileri (Pinler)
   final List<TekerCustomMarker> _customMarkers = [];
   final List<TekerPoi> _chargingStations = [];
+  Map<String, SavedLocation> _savedShortcuts = {};
 
   // Sesli Komut Modalı
   final TextEditingController _voicePromptController = TextEditingController();
@@ -57,9 +61,18 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
   void initState() {
     super.initState();
     _initGeminiService();
+    _loadShortcuts();
     _initLocationTracking();
     _fetchNearbyChargingStations();
-    TelemetryBridge.startForegroundService();
+  }
+
+  void _loadShortcuts() async {
+    final list = await SavedLocationsService.loadSavedLocations();
+    if (mounted) {
+      setState(() {
+        _savedShortcuts = list;
+      });
+    }
   }
 
   @override
@@ -120,6 +133,11 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) return;
+    }
+
+    if (permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always) {
+      TelemetryBridge.startForegroundService();
     }
 
     _positionSub = Geolocator.getPositionStream(
@@ -593,6 +611,11 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
                   ],
                 ),
 
+                const SizedBox(height: 8),
+
+                // Kısayol Konum Çubuğu (Ev, Okul, İş Yeri, Favori)
+                _buildShortcutsBar(),
+
                 // Sıradaki Dönüş Bilgisi (Turn-by-Turn)
                 if (_currentManeuver != null && _activeRoute != null)
                   TurnByTurnBanner(maneuver: _currentManeuver),
@@ -728,6 +751,114 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showAssignLocationDialog(LocationShortcutType type) {
+    final existing = _savedShortcuts[type.id];
+    showDialog(
+      context: context,
+      builder: (ctx) => SavedLocationDialog(
+        defaultType: type,
+        currentGpsLocation: _currentLocation,
+        existingLocation: existing,
+        onSaved: (saved) {
+          _loadShortcuts();
+        },
+      ),
+    );
+  }
+
+  Widget _buildShortcutsBar() {
+    final shortcuts = [
+      LocationShortcutType.home,
+      LocationShortcutType.school,
+      LocationShortcutType.work,
+      LocationShortcutType.favorite,
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: shortcuts.map((type) {
+          final saved = _savedShortcuts[type.id];
+          final isAssigned = saved != null;
+
+          IconData icon;
+          switch (type) {
+            case LocationShortcutType.home:
+              icon = Icons.home;
+              break;
+            case LocationShortcutType.school:
+              icon = Icons.school;
+              break;
+            case LocationShortcutType.work:
+              icon = Icons.business;
+              break;
+            case LocationShortcutType.favorite:
+              icon = Icons.star;
+              break;
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: Material(
+              color: isAssigned
+                  ? const Color(0xFF1B2430)
+                  : const Color(0xFF161D26).withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(12),
+              elevation: 2,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  if (isAssigned) {
+                    _requestRouteToDestination(saved.location, saved.title);
+                  } else {
+                    _showAssignLocationDialog(type);
+                  }
+                },
+                onLongPress: () => _showAssignLocationDialog(type),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isAssigned ? const Color(0xFF00E676) : Colors.white24,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        icon,
+                        color: isAssigned ? const Color(0xFF00E676) : Colors.white54,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isAssigned ? saved.title : "+ ${type.label}",
+                        style: TextStyle(
+                          color: isAssigned ? Colors.white : Colors.white60,
+                          fontSize: 12,
+                          fontWeight: isAssigned ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                      if (isAssigned) ...[
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () => _showAssignLocationDialog(type),
+                          child: const Icon(Icons.edit, color: Colors.white38, size: 13),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }

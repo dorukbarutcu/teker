@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/ebike_models.dart';
 import '../models/poi_model.dart';
 import '../models/route_models.dart';
+import 'saved_locations_service.dart';
 import 'ebike_calculator.dart';
 import 'openroute_service.dart';
 import 'overpass_service.dart';
@@ -259,7 +260,10 @@ class GeminiCommandService {
         final profile = args['profile']?.toString() ?? 'cycling-electric';
         final avoidHills = args['avoidHills'] == true;
 
-        final target = await searchLocationNominatim(destName);
+        final shortcut = await SavedLocationsService.matchShortcut(destName);
+        final LatLng? target = shortcut != null ? shortcut.location : await searchLocationNominatim(destName);
+        final String displayName = shortcut != null ? shortcut.title : destName;
+
         if (target != null) {
           final route = await OpenRouteService.getRoute(
             start: currentPosition,
@@ -268,7 +272,7 @@ class GeminiCommandService {
             avoidHills: avoidHills,
           );
           if (route != null) {
-            onRouteCreated?.call(route, destName);
+            onRouteCreated?.call(route, displayName);
             await TelemetryBridge.syncRoute(route);
 
             final energyResult = EbikeCalculator.calculateRouteEnergy(
@@ -277,7 +281,7 @@ class GeminiCommandService {
               profile: currentProfile,
             );
 
-            String msg = "$destName için rota hazırlandı. Toplam mesafe ${route.totalDistanceKm.toStringAsFixed(1)} kilometre.";
+            String msg = "$displayName için rota hazırlandı. Toplam mesafe ${route.totalDistanceKm.toStringAsFixed(1)} kilometre.";
             if (!energyResult.isSufficient) {
               msg += " Dikkat, varış için ${energyResult.deficitWh.toInt()} vat-saat ek enerjiye ihtiyacınız var. Şarj molası planlayın.";
             } else {
