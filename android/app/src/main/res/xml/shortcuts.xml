@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- CREATE_ROUTE: Hey Google, Teker ile Mersin Marina'ya rota çiz -->
+    <capability android:name="actions.intent.CREATE_ROUTE">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.teker.navigation"
+            android:targetClass="com.teker.navigation.MainActivity">
+            <url-template android:value="teker://navigate{?destination,travelMode,avoidHills}"/>
+            <parameter
+                android:name="createRoute.targetAddress"
+                android:key="destination"/>
+            <parameter
+                android:name="createRoute.travelMode"
+                android:key="travelMode"/>
+            <parameter
+                android:name="createRoute.avoid"
+                android:key="avoidHills"/>
+            <extra
+                android:key="action_type"
+                android:value="CREATE_ROUTE"/>
+        </intent>
+    </capability>
+
+    <!-- GET_THING: Hey Google, Teker'de en yakın şarj istasyonunu işaretle / Teker'de Mersin Marina'yı bul -->
+    <capability android:name="actions.intent.GET_THING">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.teker.navigation"
+            android:targetClass="com.teker.navigation.MainActivity">
+            <url-template android:value="teker://search{?query,category}"/>
+            <parameter
+                android:name="thing.name"
+                android:key="query"/>
+            <parameter
+                android:name="thing.category"
+                android:key="category"/>
+            <extra
+                android:key="action_type"
+                android:value="GET_THING"/>
+        </intent>
+    </capability>
+
+    <!-- OPEN_APP_FEATURE: Hey Google, Teker'de Turbo moda geç / işaretlediğim yerleri temizle -->
+    <capability android:name="actions.intent.OPEN_APP_FEATURE">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.teker.navigation"
+            android:targetClass="com.teker.navigation.MainActivity">
+            <url-template android:value="teker://feature{?feature}"/>
+            <parameter
+                android:name="feature"
+                android:key="feature"/>
+            <extra
+                android:key="action_type"
+                android:value="OPEN_APP_FEATURE"/>
+        </intent>
+    </capability>
+</shortcuts>
